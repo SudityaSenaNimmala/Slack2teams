@@ -1,0 +1,33 @@
+# Simple requirements for CF-Chatbot (no compilation needed)
+# Install with: pip install -r requirements-simple.txt
+
+# Core FastAPI dependencies
+fastapi
+uvicorn
+python-multipart
+
+# LangChain and AI dependencies
+langchain
+langchain-openai
+langchain-community
+openai
+
+# Vector database
+chromadb
+
+# Web scraping and text processing
+requests
+beautifulsoup4
+markdown
+
+# Data validation (use older version to avoid compilation)
+pydantic==2.4.2
+
+# PDF processing (Windows-friendly)
+PyPDF2
+pdfplumber
+
+# Excel processing
+pandas
+openpyxl
+xlrd

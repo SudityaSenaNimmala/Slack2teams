@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CF Chatbot</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      background: white; 
+      margin: 0; 
+      padding: 0;
+      min-height: 100vh;
+      scroll-behavior: smooth;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      background: white;
+      width: 100%;
+      padding: 10px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
+
+    header img {
+      height: 40px;
+    }
+
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 80px; /* Space for fixed header */
+      min-height: calc(100vh - 80px); /* Ensure content takes full height */
+    }
+
+    #messages {
+      width: 60%;
+      padding: 20px 10px 20px 10px;
+      margin-bottom: 50px; /* Space for fixed footer */
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message { 
+      margin: 8px 0; 
+      padding: 10px 15px; 
+      border-radius: 20px; 
+      width: fit-content; 
+      max-width: 70%;
+      word-wrap: break-word;
+    }
+
+    .user { 
+      background: #e1ecff; 
+      color: black; 
+      margin-left: auto; 
+      text-align: right; 
+    }
+
+    .bot { 
+      background: white; 
+      color: black; 
+      margin-right: auto; 
+      text-align: left; 
+    }
+
+    #input-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(255, 255, 255,0);
+      
+      
+      z-index: 1000;
+    }
+
+    .input-wrapper {
+      width: 60%;
+      max-width: 800px;
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+
+    #user-input {
+      flex: 1;
+      padding: 12px 50px 12px 15px;
+      border-radius: 50px;
+      border: 1px solid #ccc;
+      outline: none;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    #send-btn {
+      position: absolute;
+      right: 15px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 50px;
+      background: #0129ac;
+      color: white;
+      cursor: pointer;
+    }
+
+    #send-btn:hover {
+      background: #0056b3;
+    }
+  </style>
+  <link rel="icon" type="image/png" href="./images/CloudFuze-icon-64x64.png">
+</head>
+<body>
+  <header>
+    <img src="./images/CloudFuze Horizontal Logo.svg" alt="Logo">
+  </header>
+
+  <div class="main-content">
+    <div id="messages"></div>
+  </div>
+
+  <div id="input-container">
+    <div class="input-wrapper">
+      <input type="text" id="user-input" placeholder="Type your question...">
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const messagesDiv = document.getElementById("messages");
+    const input = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+    
+    // Generate a session ID for conversation memory
+    let sessionId = localStorage.getItem('chatbot_session_id');
+    if (!sessionId) {
+      sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('chatbot_session_id', sessionId);
+    }
+
+    function addMessage(content, sender) {
+      const div = document.createElement("div");
+      div.className = "message " + sender;
+      div.innerText = content;
+      messagesDiv.appendChild(div);
+      scrollToBottom();
+      return div;
+    }
+
+    function scrollToBottom() {
+      // Use requestAnimationFrame to ensure DOM is updated before scrolling
+      requestAnimationFrame(() => {
+        // Scroll to the very bottom of the page
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: 'smooth'
+        });
+        // Fallback: also try scrolling after a small delay
+        setTimeout(() => {
+          window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+          });
+        }, 10);
+      });
+    }
+
+    async function sendMessage() {
+      const question = input.value.trim();
+      if (!question) return;
+
+      addMessage(question, "user");
+      input.value = "";
+
+      const botDiv = addMessage("Thinking...", "bot"); // placeholder
+
+      try {
+        console.log("Sending question:", question);
+        console.log("Session ID:", sessionId);
+        
+        const response = await fetch("http://127.0.0.1:8000/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, session_id: sessionId }),
+        });
+
+        console.log("Response status:", response.status);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Response data:", data);
+        
+        const answer = data.answer;
+        botDiv.innerText = ""; // Clear "Thinking..." message
+        
+        // Simulate typing effect
+        const words = answer.split(/\s+/);
+        let i = 0;
+
+        const interval = setInterval(() => {
+          if (i >= words.length) {
+            clearInterval(interval);
+            return;
+          }
+          botDiv.innerText += (i === 0 ? "" : " ") + words[i];
+          scrollToBottom();
+          i++;
+        }, 50);
+        
+      } catch (error) {
+        console.error("Error sending message:", error);
+        botDiv.innerText = "Sorry, there was an error. Please try again.";
+      }
+    }
+
+
+
+
+
+
+
+    sendBtn.addEventListener("click", sendMessage);
+    input.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
+
+    // Add a function to start a new conversation (clear memory)
+    function startNewConversation() {
+      sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('chatbot_session_id', sessionId);
+      messagesDiv.innerHTML = '';
+    }
+
+    // Add double-click to start new conversation
+    messagesDiv.addEventListener('dblclick', startNewConversation);
+
+    // Polyfill for POST EventSource
+    class EventSourcePolyfill {
+      constructor(url, options) {
+        const { method, headers, body } = options;
+        this._url = url;
+        this._method = method || "GET";
+        this._headers = headers || {};
+        this._body = body || null;
+        this.onmessage = null;
+        this.onerror = null;
+        this._start();
+      }
+
+      async _start() {
+        const response = await fetch(this._url, {
+          method: this._method,
+          headers: this._headers,
+          body: this._body,
+        });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop();
+          for (const part of parts) {
+            if (part.startsWith("data: ")) {
+              const data = part.replace("data: ", "");
+              if (this.onmessage) this.onmessage({ data });
+            }
+          }
+        }
+      }
+
+      close() {}
+    }
+  </script>
+</body>
+</html>
