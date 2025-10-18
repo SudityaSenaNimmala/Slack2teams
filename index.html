@@ -390,13 +390,16 @@
       font-size: 12px;
       color: #6c757d;
       transition: all 0.2s ease;
-      display: inline-block;
+      display: flex;
+      align-items: center;
       width: fit-content;
       position: absolute;
       top: 50%;
       left: -80px;
       transform: translateY(-50%);
       z-index: 10;
+      height: 28px;
+      box-sizing: border-box;
     }
 
     .copy-button:hover {
@@ -537,7 +540,7 @@
         div.innerHTML = `
           <div class="message-content">${content}</div>
           <button class="copy-button" onclick="copyMessage(this)" title="Copy message">
-            Copy
+            📋 Copy
           </button>
         `;
       } else {
@@ -697,7 +700,7 @@
                   // Clear thinking animation and prepare for streaming
                   botDiv.innerHTML = `
                     <div class="message-content"></div>
-                    <button class="copy-button" onclick="copyMessage(this)" title="Copy message" style="position: absolute; bottom: 8px; right: 8px;">
+                    <button class="copy-button" onclick="copyMessage(this)" title="Copy message">
                       📋 Copy
                     </button>
                   `;
@@ -713,7 +716,7 @@
                     // Fallback: update entire div if structure is different
                     botDiv.innerHTML = `
                       <div class="message-content">${renderMarkdown(fullResponse)}</div>
-                      <button class="copy-button" onclick="copyMessage(this)" title="Copy message" style="position: absolute; bottom: 8px; right: 8px;">
+                      <button class="copy-button" onclick="copyMessage(this)" title="Copy message" >
                         📋 Copy
                       </button>
                     `;
@@ -729,7 +732,7 @@
                     // Fallback: update entire div if structure is different
                     botDiv.innerHTML = `
                       <div class="message-content">${renderMarkdown(fullResponse)}</div>
-                      <button class="copy-button" onclick="copyMessage(this)" title="Copy message" style="position: absolute; bottom: 8px; right: 8px;">
+                      <button class="copy-button" onclick="copyMessage(this)" title="Copy message" >
                         📋 Copy
                       </button>
                     `;
