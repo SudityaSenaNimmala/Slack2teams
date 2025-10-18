@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - CF Chatbot</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      background: white; 
+      margin: 0; 
+      padding: 0;
+      min-height: 100vh;
+      scroll-behavior: smooth;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      background: white;
+      width: 100%;
+      padding: 10px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
+
+    header img {
+      height: 40px;
+    }
+
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-top: 80px; /* Space for fixed header */
+      min-height: calc(100vh - 80px); /* Ensure content takes full height */
+    }
+
+    .login-container {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .login-title {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .login-subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 16px;
+    }
+
+    #microsoftLogin {
+      background: #0078d4;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+
+    #microsoftLogin:hover {
+      background: #106ebe;
+      transform: translateY(-1px);
+    }
+
+    #microsoftLogin:active {
+      transform: translateY(1px);
+    }
+
+    .provider-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .welcome-message {
+      margin-top: 20px;
+      padding: 15px;
+      background: #e1ecff;
+      border-radius: 10px;
+      color: #333;
+      font-size: 14px;
+    }
+
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 30px 20px;
+        margin: 20px;
+      }
+      
+      .login-title {
+        font-size: 24px;
+      }
+    }
+  </style>
+  <link rel="icon" type="image/png" href="./images/CloudFuze-icon-64x64.png">
+</head>
+<body>
+  <header>
+    <img src="./images/CloudFuze Horizontal Logo.svg" alt="CloudFuze Logo">
+  </header>
+
+  <div class="main-content">
+    <div class="login-container">
+      <h1 class="login-title">Welcome to CF Chatbot</h1>
+      <p class="login-subtitle">Please sign in to continue</p>
+      <button id="microsoftLogin" class="login-btn">
+        <svg class="provider-icon" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
+        </svg>
+        Sign in with Microsoft
+      </button>
+      
+    </div>
+  </div>
+
+  <script>
+    // Microsoft OAuth configuration
+    const MICROSOFT_CLIENT_ID = "63bd4522-368b-4bd7-a84d-9c7f205cd2a6"; // Replace with your Azure app client ID
+    const MICROSOFT_REDIRECT_URI = window.location.origin + "/index.html";
+    const MICROSOFT_SCOPE = "openid email profile User.Read";
+    const MICROSOFT_TENANT = "common"; // Allows both personal and work/school accounts
+
+    // PKCE helper functions
+    function generateCodeVerifier() {
+      const array = new Uint8Array(32);
+      crypto.getRandomValues(array);
+      return base64URLEncode(array);
+    }
+
+    function generateCodeChallenge(verifier) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(verifier);
+      return crypto.subtle.digest('SHA-256', data).then(hash => {
+        return base64URLEncode(new Uint8Array(hash));
+      });
+    }
+
+    function base64URLEncode(array) {
+      return btoa(String.fromCharCode.apply(null, Array.from(array)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+    }
+
+    // Check if user is already logged in
+    function checkAuthStatus() {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      if (user && user.access_token) {
+        // Verify token is still valid
+        verifyToken(user.access_token).then(isValid => {
+          if (isValid) {
+            window.location.href = "index.html";
+          } else {
+            localStorage.removeItem('user');
+          }
+        });
+      }
+    }
+
+    // Verify Microsoft access token
+    async function verifyToken(accessToken) {
+      try {
+        const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+        return response.ok;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    // Microsoft login handler
+    async function handleMicrosoftLogin(event) {
+      event.preventDefault();
+      
+      // Check if Client ID is configured
+      if (MICROSOFT_CLIENT_ID === "YOUR_MICROSOFT_CLIENT_ID") {
+        alert("Please configure your Microsoft Client ID in the login.html file. Replace 'YOUR_MICROSOFT_CLIENT_ID' with your actual Azure App Client ID.");
+        return;
+      }
+      
+      // Generate PKCE parameters
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      
+      // Store code verifier for later use
+      sessionStorage.setItem('code_verifier', codeVerifier);
+      
+      const authUrl = `https://login.microsoftonline.com/${MICROSOFT_TENANT}/oauth2/v2.0/authorize?` +
+        `client_id=${MICROSOFT_CLIENT_ID}&` +
+        `response_type=code&` +
+        `redirect_uri=${encodeURIComponent(MICROSOFT_REDIRECT_URI)}&` +
+        `response_mode=query&` +
+        `scope=${encodeURIComponent(MICROSOFT_SCOPE)}&` +
+        `prompt=select_account&` +
+        `code_challenge=${codeChallenge}&` +
+        `code_challenge_method=S256&` +
+        `state=${Date.now()}`;
+      
+      window.location.href = authUrl;
+    }
+
+
+    // Handle OAuth callback
+    function handleOAuthCallback() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const error = urlParams.get('error');
+
+      if (error) {
+        alert('Microsoft login failed: ' + error);
+        return;
+      }
+
+      if (code) {
+        exchangeCodeForToken(code);
+      }
+    }
+
+    // Exchange authorization code for access token
+    async function exchangeCodeForToken(code) {
+      // Get code verifier from session storage
+      const codeVerifier = sessionStorage.getItem('code_verifier');
+      
+      if (!codeVerifier) {
+        alert('Login failed: Code verifier not found');
+        return;
+      }
+      
+      try {
+        const requestBody = {
+          code: code,
+          redirect_uri: MICROSOFT_REDIRECT_URI,
+          code_verifier: codeVerifier
+        };
+        
+        const response = await fetch('http://127.0.0.1:8002/auth/microsoft/callback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Clear code verifier from session storage
+          sessionStorage.removeItem('code_verifier');
+          
+          const user = {
+            id: data.user_id,
+            name: data.name,
+            email: data.email,
+            access_token: data.access_token,
+            refresh_token: data.refresh_token
+          };
+          
+          localStorage.setItem('user', JSON.stringify(user));
+          
+          // Show welcome message
+          const welcomeDiv = document.createElement('div');
+          welcomeDiv.className = 'welcome-message';
+          welcomeDiv.innerHTML = `Welcome ${user.name}! Redirecting to chatbot...`;
+          document.querySelector('.login-container').appendChild(welcomeDiv);
+          
+          // Redirect after a short delay
+          setTimeout(() => {
+            window.location.href = "index.html";
+          }, 1500);
+        } else {
+          const errorText = await response.text();
+          alert('Login failed: ' + (errorText || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('Login failed: ' + error.message);
+      }
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      
+      // Add event listeners
+      const microsoftButton = document.getElementById("microsoftLogin");
+      
+      if (microsoftButton) {
+        microsoftButton.addEventListener("click", handleMicrosoftLogin);
+      }
+      
+      checkAuthStatus();
+      handleOAuthCallback();
+    });
+  </script>
+</body>
+</html>

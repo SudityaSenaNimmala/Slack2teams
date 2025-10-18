@@ -3,7 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>CF Chatbot</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
+    /* Loading animation */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
     body { 
       font-family: Arial, sans-serif; 
       background: white; 
@@ -16,6 +23,7 @@
     header {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       background: white;
       width: 100%;
       padding: 10px 20px;
@@ -29,6 +37,199 @@
 
     header img {
       height: 40px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .new-chat-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #f8f9fa;
+      color: #495057;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      min-width: 100px;
+    }
+
+    .new-chat-btn:hover {
+      background: #e9ecef;
+      border-color: #adb5bd;
+      color: #212529;
+    }
+
+    .new-chat-btn:active {
+      background: #dee2e6;
+      transform: translateY(1px);
+    }
+
+    .new-chat-btn.undo-mode {
+      background: #dc3545;
+      color: white;
+      border-color: #dc3545;
+      min-width: 100px;
+    }
+
+    .new-chat-btn.undo-mode:hover {
+      background: #c82333;
+      border-color: #bd2130;
+    }
+
+    .countdown-container {
+      position: relative;
+      margin-left: 4px;
+      width: 24px;
+      height: 20px;
+    }
+
+    .countdown-circle {
+      width: 24px;
+      height: 24px;
+      position: absolute;
+      top: -2px;
+      left: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .countdown-circle svg {
+      width: 24px;
+      height: 24px;
+      transform: rotate(-90deg);
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .countdown-circle .progress-ring {
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .countdown-circle .progress-ring-bg {
+      stroke: rgba(255, 255, 255, 0.4);
+    }
+
+    .countdown-circle .progress-ring-fill {
+      stroke: #fff;
+      stroke-linecap: round;
+      transition: stroke-dasharray 0.1s linear;
+    }
+
+    .countdown-text {
+      font-size: 11px;
+      font-weight: bold;
+      color: white;
+      position: absolute;
+      z-index: 2;
+      text-align: center;
+      line-height: 1;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .user-menu {
+      position: relative;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 20px;
+      transition: background-color 0.3s ease;
+    }
+
+    .user-menu:hover {
+      background-color: #f5f5f5;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: #0129ac;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .dropdown-arrow {
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 4px solid #666;
+      margin-left: 4px;
+    }
+
+    .user-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 20px;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      min-width: 200px;
+      z-index: 1001;
+      display: none;
+      margin-top: 5px;
+    }
+
+    .user-dropdown.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+      background-color: #f5f5f5;
+    }
+
+    .dropdown-item.logout {
+      color: #d32f2f;
+    }
+
+    .dropdown-item.logout:hover {
+      background-color: #ffebee;
     }
 
     .main-content {
@@ -68,6 +269,154 @@
       color: black; 
       margin-right: auto; 
       text-align: left; 
+    }
+
+    /* Thinking animation */
+    .thinking {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-style: italic;
+      color: #666;
+    }
+
+    .thinking-dots {
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .thinking-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #666;
+      animation: thinking-bounce 1.4s infinite ease-in-out both;
+    }
+
+    .thinking-dots span:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .thinking-dots span:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    .thinking-dots span:nth-child(3) {
+      animation-delay: 0s;
+    }
+
+    @keyframes thinking-bounce {
+      0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+      }
+      40% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* Markdown styling for bot messages */
+    .bot h1, .bot h2, .bot h3, .bot h4, .bot h5, .bot h6 {
+      margin: 10px 0 5px 0;
+      font-weight: bold;
+    }
+    
+    .bot h1 { font-size: 1.5em; }
+    .bot h2 { font-size: 1.3em; }
+    .bot h3 { font-size: 1.1em; }
+    
+    .bot ul, .bot ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    
+    .bot li {
+      margin: 5px 0;
+    }
+    
+    .bot strong {
+      font-weight: bold;
+    }
+    
+    .bot em {
+      font-style: italic;
+    }
+    
+    .bot code {
+      background-color: #f4f4f4;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    
+    .bot pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    
+    .bot pre code {
+      background: none;
+      padding: 0;
+    }
+    
+    .bot blockquote {
+      border-left: 4px solid #ddd;
+      margin: 10px 0;
+      padding-left: 15px;
+      color: #666;
+    }
+    
+    .bot a {
+      color: #0066cc;
+      text-decoration: underline;
+    }
+    
+    .bot a:hover {
+      color: #004499;
+    }
+
+    /* Copy button styles */
+    .copy-button {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #6c757d;
+      transition: all 0.2s ease;
+      display: inline-block;
+      width: fit-content;
+      position: absolute;
+      top: 50%;
+      left: -80px;
+      transform: translateY(-50%);
+      z-index: 10;
+    }
+
+    .copy-button:hover {
+      background: #e9ecef;
+      color: #495057;
+      border-color: #adb5bd;
+    }
+
+    .copy-button.copied {
+      background: #d4edda;
+      color: #155724;
+      border-color: #c3e6cb;
+    }
+
+    .message.bot {
+      position: relative;
+    }
+
+    .message.bot .message-content {
+      margin-bottom: 0;
     }
 
     #input-container {
@@ -122,8 +471,29 @@
   <link rel="icon" type="image/png" href="./images/CloudFuze-icon-64x64.png">
 </head>
 <body>
+  
   <header>
     <img src="./images/CloudFuze Horizontal Logo.svg" alt="Logo">
+    <div class="header-controls">
+      <button class="new-chat-btn" id="newChatBtn">
+        <span>💬</span>
+        <span>New Chat</span>
+      </button>
+      <div class="user-menu" id="userMenu">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <span class="user-name" id="userName">User</span>
+        <div class="dropdown-arrow"></div>
+      </div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="dropdown-item" id="userEmail"></div>
+          <div class="dropdown-item logout" id="logoutBtn">
+            <span>🚪</span>
+            <span>Logout</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </header>
 
   <div class="main-content">
@@ -158,6 +528,46 @@
       return div;
     }
 
+    function addMessageHTML(content, sender) {
+      const div = document.createElement("div");
+      div.className = "message " + sender;
+      
+      if (sender === "bot") {
+        // For bot messages, wrap content and add copy button positioned absolutely
+        div.innerHTML = `
+          <div class="message-content">${content}</div>
+          <button class="copy-button" onclick="copyMessage(this)" title="Copy message">
+            Copy
+          </button>
+        `;
+      } else {
+        // For user messages, keep as is
+        div.innerHTML = content;
+      }
+      
+      messagesDiv.appendChild(div);
+      scrollToBottom();
+      return div;
+    }
+
+    function renderMarkdown(text) {
+      if (typeof marked !== 'undefined') {
+        return marked.parse(text);
+      } else {
+        // Fallback: basic markdown-like formatting
+        return text
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code>$1</code>')
+          .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+          .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+          .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+          .replace(/^\* (.*$)/gim, '<li>$1</li>')
+          .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
+          .replace(/\n/g, '<br>');
+      }
+    }
+
     function scrollToBottom() {
       // Use requestAnimationFrame to ensure DOM is updated before scrolling
       requestAnimationFrame(() => {
@@ -176,6 +586,48 @@
       });
     }
 
+    // Copy message functionality
+    async function copyMessage(button) {
+      try {
+        // Get the message content (text only, without HTML)
+        const messageDiv = button.closest('.message.bot');
+        const contentDiv = messageDiv.querySelector('.message-content');
+        
+        // Extract text content from the HTML
+        const textContent = contentDiv.textContent || contentDiv.innerText || '';
+        
+        // Copy to clipboard
+        await navigator.clipboard.writeText(textContent);
+        
+        // Show success feedback
+        const originalText = button.innerHTML;
+        button.innerHTML = '✅ Copied!';
+        button.classList.add('copied');
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.classList.remove('copied');
+        }, 2000);
+        
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+        
+        // Fallback: show error feedback
+        const originalText = button.innerHTML;
+        button.innerHTML = '❌ Failed';
+        button.style.background = '#f8d7da';
+        button.style.color = '#721c24';
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.style.background = '';
+          button.style.color = '';
+        }, 2000);
+      }
+    }
+
     async function sendMessage() {
       const question = input.value.trim();
       if (!question) return;
@@ -183,16 +635,37 @@
       addMessage(question, "user");
       input.value = "";
 
-      const botDiv = addMessage("Thinking...", "bot"); // placeholder
+      // Show thinking animation
+      const botDiv = addMessageHTML("", "bot");
+      botDiv.innerHTML = `
+        <div class="thinking">
+          Thinking
+          <span class="thinking-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </div>
+      `;
 
       try {
         console.log("Sending question:", question);
-        console.log("Session ID:", sessionId);
+        console.log("User ID:", currentUser ? currentUser.id : "Not logged in");
         
-        const response = await fetch("http://127.0.0.1:8000/chat", {
+        const requestBody = { question };
+        
+        // Use user ID if available, otherwise fall back to session ID
+        if (currentUser && currentUser.id) {
+          requestBody.user_id = currentUser.id;
+        } else {
+          requestBody.session_id = sessionId;
+        }
+        
+        // Use streaming endpoint for real-time responses
+        const response = await fetch("http://127.0.0.1:8002/chat/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question, session_id: sessionId }),
+          body: JSON.stringify(requestBody),
         });
 
         console.log("Response status:", response.status);
@@ -201,29 +674,82 @@
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
-        console.log("Response data:", data);
-        
-        const answer = data.answer;
-        botDiv.innerText = ""; // Clear "Thinking..." message
-        
-        // Simulate typing effect
-        const words = answer.split(/\s+/);
-        let i = 0;
+        // Keep thinking animation until we get thinking_complete signal
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let fullResponse = "";
 
-        const interval = setInterval(() => {
-          if (i >= words.length) {
-            clearInterval(interval);
-            return;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ""; // Keep incomplete line in buffer
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.type === 'thinking_complete') {
+                  // Clear thinking animation and prepare for streaming
+                  botDiv.innerHTML = `
+                    <div class="message-content"></div>
+                    <button class="copy-button" onclick="copyMessage(this)" title="Copy message" style="position: absolute; bottom: 8px; right: 8px;">
+                      📋 Copy
+                    </button>
+                  `;
+                  console.log("Thinking complete, starting streaming...");
+                } else if (data.type === 'token') {
+                  // Add token to response
+                  fullResponse += data.token;
+                  // Render markdown and update only the message content
+                  const contentDiv = botDiv.querySelector('.message-content');
+                  if (contentDiv) {
+                    contentDiv.innerHTML = renderMarkdown(fullResponse);
+                  } else {
+                    // Fallback: update entire div if structure is different
+                    botDiv.innerHTML = `
+                      <div class="message-content">${renderMarkdown(fullResponse)}</div>
+                      <button class="copy-button" onclick="copyMessage(this)" title="Copy message" style="position: absolute; bottom: 8px; right: 8px;">
+                        📋 Copy
+                      </button>
+                    `;
+                  }
+                  scrollToBottom();
+                } else if (data.type === 'done') {
+                  // Final response received
+                  fullResponse = data.full_response || fullResponse;
+                  const contentDiv = botDiv.querySelector('.message-content');
+                  if (contentDiv) {
+                    contentDiv.innerHTML = renderMarkdown(fullResponse);
+                  } else {
+                    // Fallback: update entire div if structure is different
+                    botDiv.innerHTML = `
+                      <div class="message-content">${renderMarkdown(fullResponse)}</div>
+                      <button class="copy-button" onclick="copyMessage(this)" title="Copy message" style="position: absolute; bottom: 8px; right: 8px;">
+                        📋 Copy
+                      </button>
+                    `;
+                  }
+                  console.log("Streaming complete");
+                  return;
+                } else if (data.type === 'error') {
+                  throw new Error(data.error);
+                }
+              } catch (e) {
+                console.error("Error parsing streaming data:", e);
+              }
+            }
           }
-          botDiv.innerText += (i === 0 ? "" : " ") + words[i];
-          scrollToBottom();
-          i++;
-        }, 50);
+        }
         
       } catch (error) {
         console.error("Error sending message:", error);
-        botDiv.innerText = "Sorry, there was an error. Please try again.";
+        // Clear thinking animation and show error
+        botDiv.innerHTML = "Sorry, there was an error. Please try again.";
       }
     }
 
@@ -237,10 +763,199 @@
     input.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
 
     // Add a function to start a new conversation (clear memory)
-    function startNewConversation() {
+    async function startNewConversation() {
+      if (currentUser && currentUser.id) {
+        // Clear user's chat history on server
+        try {
+          await fetch(`http://127.0.0.1:8002/chat/history/${currentUser.id}`, {
+            method: "DELETE"
+          });
+        } catch (error) {
+          console.error('Failed to clear chat history:', error);
+        }
+      }
+      
+      // Clear local session
       sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       localStorage.setItem('chatbot_session_id', sessionId);
       messagesDiv.innerHTML = '';
+    }
+
+    // Variables for undo functionality
+    let chatBackup = null;
+    let undoTimeout = null;
+    let isUndoMode = false;
+
+    // Handle new chat button click
+    async function handleNewChat() {
+      const button = document.getElementById('newChatBtn');
+      
+      if (!isUndoMode) {
+        // Store current chat before clearing
+        chatBackup = {
+          messages: Array.from(messagesDiv.children).map(msg => ({
+            className: msg.className,
+            innerHTML: msg.innerHTML
+          })),
+          sessionId: sessionId
+        };
+        
+        // Clear the messages display
+        messagesDiv.innerHTML = '';
+        
+        // Change button to undo mode
+        button.innerHTML = '<span>↶</span><span>Undo</span><div class="countdown-container"><div class="countdown-circle" id="countdownCircle"></div></div>';
+        button.classList.add('undo-mode');
+        isUndoMode = true;
+        
+        // Initialize countdown circle
+        initializeCountdownCircle();
+        
+        // Start countdown
+        startUndoCountdown();
+      } else {
+        // Restore chat
+        restoreChat();
+      }
+    }
+
+    // Initialize countdown circle
+    function initializeCountdownCircle() {
+      const circle = document.getElementById('countdownCircle');
+      const radius = 10; // radius of the circle (increased from 8)
+      const circumference = 2 * Math.PI * radius;
+      
+      // Create SVG circle - start with full circle (offset = 0)
+      circle.innerHTML = `
+        <svg width="24" height="24">
+          <circle class="progress-ring progress-ring-bg" cx="12" cy="12" r="${radius}"></circle>
+          <circle class="progress-ring progress-ring-fill" cx="12" cy="12" r="${radius}" 
+                  stroke-dasharray="${circumference}" 
+                  stroke-dashoffset="0"></circle>
+        </svg>
+        <span class="countdown-text" id="countdownText">10</span>
+      `;
+      
+      // Store circumference for animation
+      circle.dataset.circumference = circumference;
+    }
+
+    // Start undo countdown
+    function startUndoCountdown() {
+      const textElement = document.getElementById('countdownText');
+      const circle = document.getElementById('countdownCircle');
+      const circumference = parseFloat(circle.dataset.circumference);
+      
+      const startTime = Date.now();
+      const duration = 10000; // 10 seconds in milliseconds
+      
+      const updateCountdown = () => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, duration - elapsed);
+        const countdown = Math.ceil(remaining / 1000);
+        
+        // Update text (always white)
+        textElement.textContent = countdown;
+        textElement.style.color = 'white';
+        
+        // Update circle progress - smooth animation
+        const progress = remaining / duration; // This goes from 1.0 to 0.0
+        const offset = circumference - (progress * circumference);
+        const fillCircle = circle.querySelector('.progress-ring-fill');
+        fillCircle.style.strokeDashoffset = offset;
+        
+        // Keep circle white always
+        fillCircle.style.stroke = '#fff';
+        
+        if (remaining > 0) {
+          undoTimeout = requestAnimationFrame(updateCountdown);
+        } else {
+          // Time's up - permanently delete chat
+          permanentlyDeleteChat();
+        }
+      };
+      
+      updateCountdown();
+    }
+
+    // Restore chat from backup
+    function restoreChat() {
+      if (chatBackup) {
+        // Restore messages
+        messagesDiv.innerHTML = '';
+        chatBackup.messages.forEach(msgData => {
+          const msgDiv = document.createElement('div');
+          msgDiv.className = msgData.className;
+          msgDiv.innerHTML = msgData.innerHTML;
+          messagesDiv.appendChild(msgDiv);
+        });
+        
+        // Add copy buttons to any bot messages that don't have them
+        const botMessages = messagesDiv.querySelectorAll('.message.bot');
+        botMessages.forEach(msgDiv => {
+          if (!msgDiv.querySelector('.copy-button')) {
+            const textContent = msgDiv.textContent || msgDiv.innerText || '';
+            if (textContent.trim()) {
+              msgDiv.innerHTML = `
+                <div class="message-content">${msgDiv.innerHTML}</div>
+                <button class="copy-button" onclick="copyMessage(this)" title="Copy message">
+                  📋 Copy
+                </button>
+              `;
+            }
+          }
+        });
+        
+        // Restore session
+        sessionId = chatBackup.sessionId;
+        localStorage.setItem('chatbot_session_id', sessionId);
+        
+        // Scroll to bottom after restoring messages
+        scrollToBottom();
+        
+        // Clear backup
+        chatBackup = null;
+      }
+      
+      // Reset button
+      resetNewChatButton();
+    }
+
+    // Permanently delete chat
+    async function permanentlyDeleteChat() {
+      if (currentUser && currentUser.id) {
+        // Clear user's chat history on server
+        try {
+          await fetch(`http://127.0.0.1:8002/chat/history/${currentUser.id}`, {
+            method: "DELETE"
+          });
+        } catch (error) {
+          console.error('Failed to clear chat history:', error);
+        }
+      }
+      
+      // Clear local session
+      sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('chatbot_session_id', sessionId);
+      
+      // Clear backup
+      chatBackup = null;
+      
+      // Reset button
+      resetNewChatButton();
+    }
+
+    // Reset new chat button to normal state
+    function resetNewChatButton() {
+      const button = document.getElementById('newChatBtn');
+      button.innerHTML = '<span>💬</span><span>New Chat</span>';
+      button.classList.remove('undo-mode');
+      isUndoMode = false;
+      
+      if (undoTimeout) {
+        cancelAnimationFrame(undoTimeout);
+        undoTimeout = null;
+      }
     }
 
     // Add double-click to start new conversation
@@ -285,6 +1000,266 @@
 
       close() {}
     }
+
+    // User authentication functionality
+    let currentUser = null;
+
+    // Handle OAuth callback
+    function handleOAuthCallback() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const error = urlParams.get('error');
+
+      if (error) {
+        alert('Microsoft login failed: ' + error);
+        return;
+      }
+
+      if (code) {
+        exchangeCodeForToken(code);
+      }
+    }
+
+    // Exchange authorization code for access token
+    async function exchangeCodeForToken(code) {
+      // Get code verifier from session storage
+      const codeVerifier = sessionStorage.getItem('code_verifier');
+      
+      if (!codeVerifier) {
+        alert('Login failed: Code verifier not found');
+        window.location.href = "login.html";
+        return;
+      }
+      
+      try {
+        const requestBody = {
+          code: code,
+          redirect_uri: window.location.origin + "/index.html",
+          code_verifier: codeVerifier
+        };
+        
+        const response = await fetch('http://localhost:8002/auth/microsoft/callback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Clear code verifier from session storage
+          sessionStorage.removeItem('code_verifier');
+          
+          const user = {
+            id: data.user_id,
+            name: data.name,
+            email: data.email,
+            access_token: data.access_token,
+            refresh_token: data.refresh_token
+          };
+          
+          localStorage.setItem('user', JSON.stringify(user));
+          
+          // Clear URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // Initialize with new user
+          currentUser = user;
+          updateUserInfo(user);
+          loadUserChatHistory(user.id);
+          hideLoadingIndicator();
+        } else {
+          const errorText = await response.text();
+          try {
+            const errorJson = JSON.parse(errorText);
+            alert('Login failed: ' + (errorJson.error || errorText || 'Unknown error'));
+          } catch (e) {
+            alert('Login failed: ' + (errorText || 'Unknown error'));
+          }
+          hideLoadingIndicator();
+          window.location.href = "login.html";
+        }
+        } catch (error) {
+          hideLoadingIndicator();
+          alert('Login failed: ' + error.message);
+          window.location.href = "login.html";
+        }
+    }
+
+    // Initialize authentication
+    function initAuth() {
+      // Check for OAuth callback first
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      if (code) {
+        // We have an OAuth callback, handle it first
+        showLoadingIndicator("Authenticating...");
+        handleOAuthCallback();
+        return; // Don't check for existing user, let the callback handle it
+      }
+      
+      // Check if user is logged in (only if no OAuth callback)
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      
+      if (!user || !user.access_token) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      // Verify token is still valid
+      showLoadingIndicator("Loading user data...");
+      verifyToken(user.access_token).then(isValid => {
+        if (isValid) {
+          currentUser = user;
+          updateUserInfo(user);
+          loadUserChatHistory(user.id);
+          hideLoadingIndicator();
+        } else {
+          localStorage.removeItem('user');
+          window.location.href = "login.html";
+        }
+      });
+    }
+
+    // Verify Microsoft access token
+    async function verifyToken(accessToken) {
+      try {
+        const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+        return response.ok;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    // Update user info in header
+    function updateUserInfo(user) {
+      const userName = document.getElementById('userName');
+      const userAvatar = document.getElementById('userAvatar');
+      const userEmail = document.getElementById('userEmail');
+      
+      if (user) {
+        userName.textContent = user.name || 'User';
+        userAvatar.textContent = (user.name || 'U').charAt(0).toUpperCase();
+        userEmail.textContent = user.email || '';
+      } else {
+        userName.textContent = 'User';
+        userAvatar.textContent = 'U';
+        userEmail.textContent = '';
+      }
+    }
+
+    // Handle dropdown toggle
+    function toggleDropdown() {
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.classList.toggle('show');
+    }
+
+    // Close dropdown when clicking outside
+    function closeDropdown(event) {
+      const userMenu = document.getElementById('userMenu');
+      const dropdown = document.getElementById('userDropdown');
+      
+      if (!userMenu.contains(event.target)) {
+        dropdown.classList.remove('show');
+      }
+    }
+
+    // Load user's chat history
+    async function loadUserChatHistory(userId) {
+      try {
+        const response = await fetch(`http://127.0.0.1:8002/chat/history/${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const history = data.history || [];
+          
+          // Clear existing messages
+          messagesDiv.innerHTML = '';
+          
+          // Load chat history
+          for (const message of history) {
+            const sender = message.role === 'user' ? 'user' : 'bot';
+            if (sender === 'bot') {
+              // Render markdown for bot messages with copy button
+              addMessageHTML(renderMarkdown(message.content), sender);
+            } else {
+              // Keep plain text for user messages
+              addMessage(message.content, sender);
+            }
+          }
+          
+          // Scroll to bottom
+          scrollToBottom();
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+        // Continue with empty chat if loading fails
+      }
+    }
+
+    // Handle logout
+    function handleLogout() {
+      try {
+        // Clear user data from localStorage
+        localStorage.removeItem('user');
+        currentUser = null;
+        
+        // Redirect to login page
+        window.location.href = "login.html";
+      } catch (error) {
+        console.error('Logout failed:', error);
+        alert('Logout failed: ' + error.message);
+      }
+    }
+
+    // Initialize when page loads
+    // Show loading indicator
+    function showLoadingIndicator(message) {
+      const loadingDiv = document.createElement('div');
+      loadingDiv.id = 'loading-indicator';
+      loadingDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      `;
+      loadingDiv.innerHTML = `
+        <div style="width: 20px; height: 20px; border: 2px solid #fff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        ${message}
+      `;
+      document.body.appendChild(loadingDiv);
+    }
+    
+    // Hide loading indicator
+    function hideLoadingIndicator() {
+      const loadingDiv = document.getElementById('loading-indicator');
+      if (loadingDiv) {
+        loadingDiv.remove();
+      }
+    }
+
+    initAuth();
+
+    // Event listeners
+    document.getElementById('newChatBtn').addEventListener('click', handleNewChat);
+    document.getElementById('userMenu').addEventListener('click', toggleDropdown);
+    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    document.addEventListener('click', closeDropdown);
   </script>
 </body>
 </html>

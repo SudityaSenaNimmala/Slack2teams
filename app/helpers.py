@@ -1,21 +1,55 @@
 import os
 import requests
+import json
 import markdown
 from bs4 import BeautifulSoup
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.schema import Document
-from config import CHROMA_DB_PATH
+from config import CHROMA_DB_PATH, BLOG_POSTS_PER_PAGE, BLOG_MAX_PAGES
 from app.pdf_processor import process_pdf_directory, chunk_pdf_documents
 from app.excel_processor import process_excel_directory, chunk_excel_documents
 from app.doc_processor import process_doc_directory, chunk_doc_documents
 
 
+def fetch_posts(base_url: str, per_page=10, max_pages=6):
+    """Fetch posts from WordPress API with pagination support."""
+    all_posts = []
+    page = 1
+    session = requests.Session()
+    
+    while page <= max_pages:
+        url = f"{base_url}?per_page={per_page}&page={page}"
+        print(f"Fetching: {url}")
+        try:
+            resp = session.get(url, timeout=60, stream=True)
+            resp.raise_for_status()
+            posts = json.loads(resp.content.decode("utf-8"))
+            if not posts:
+                break
+            all_posts.extend(posts)
+            print(f"Page {page} fetched, total so far: {len(all_posts)}")
+        except Exception as e:
+            print(f"Error fetching page {page}: {e}")
+            break
+        page += 1
+    
+    return all_posts
+
 def load_webpage(url: str):
     """Fetch posts from WordPress API and return raw text."""
-    response = requests.get(url)
-    data = response.json()
+    # Check if URL contains pagination parameters to determine if we should use pagination
+    if "per_page=" in url and "page=" in url:
+        # Single page request - use original method
+        response = requests.get(url)
+        data = response.json()
+    else:
+        # Use pagination for better coverage
+        # Extract base URL (remove existing parameters)
+        base_url = url.split('?')[0] if '?' in url else url
+        data = fetch_posts(base_url, per_page=BLOG_POSTS_PER_PAGE, max_pages=BLOG_MAX_PAGES)
+    
     texts = []
     for post in data:
         if "content" in post and "rendered" in post["content"]:
@@ -27,6 +61,15 @@ def strip_markdown(md_text: str) -> str:
     html = markdown.markdown(md_text)
     soup = BeautifulSoup(html, "html.parser")
     return soup.get_text()
+
+def preserve_markdown(md_text: str) -> str:
+    """Preserve Markdown formatting for better display."""
+    # Clean up any HTML tags that might interfere with Markdown
+    soup = BeautifulSoup(md_text, "html.parser")
+    clean_text = soup.get_text()
+    
+    # Return the clean Markdown text (don't convert to HTML)
+    return clean_text
 
 def build_vectorstore(url: str):
     """Build and persist embeddings for web documents."""
