@@ -74,8 +74,20 @@ def preserve_markdown(md_text: str) -> str:
 def build_vectorstore(url: str):
     """Build and persist embeddings for web documents."""
     raw_text = load_webpage(url)
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    docs = splitter.create_documents([raw_text])
+    
+    # CRITICAL: Clean HTML tags from web content for better semantic search
+    print("Cleaning HTML tags from web content...")
+    soup = BeautifulSoup(raw_text, "html.parser")
+    clean_text = soup.get_text(separator="\n", strip=True)
+    print(f"[OK] Cleaned web content: {len(raw_text)} chars -> {len(clean_text)} chars")
+    
+    # Use larger chunks with more overlap for better semantic search
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1500,  # Larger chunks for more context
+        chunk_overlap=300,  # More overlap to maintain context across chunks
+        separators=["\n\n", "\n", ". ", " ", ""]  # Smart splitting by paragraphs, sentences
+    )
+    docs = splitter.create_documents([clean_text])
     embeddings = OpenAIEmbeddings()
     vectorstore = Chroma.from_documents(docs, embeddings, persist_directory=CHROMA_DB_PATH)
     return vectorstore
@@ -84,8 +96,20 @@ def build_combined_vectorstore(url: str, pdf_directory: str, excel_directory: st
     """Build and persist embeddings for web content, PDF documents, Excel files, and Word documents."""
     print("Loading web content...")
     raw_text = load_webpage(url)
-    web_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    web_docs = web_splitter.create_documents([raw_text])
+    
+    # CRITICAL: Clean HTML tags from web content for better semantic search
+    print("Cleaning HTML tags from web content...")
+    soup = BeautifulSoup(raw_text, "html.parser")
+    clean_text = soup.get_text(separator="\n", strip=True)
+    print(f"[OK] Cleaned web content: {len(raw_text)} chars -> {len(clean_text)} chars")
+    
+    # Use larger chunks with more overlap for better semantic search
+    web_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1500,  # Larger chunks for more context
+        chunk_overlap=300,  # More overlap to maintain context across chunks
+        separators=["\n\n", "\n", ". ", " ", ""]  # Smart splitting by paragraphs, sentences
+    )
+    web_docs = web_splitter.create_documents([clean_text])
     
     # Add source metadata to web docs
     for doc in web_docs:

@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# OpenAI API Key
-os.environ["OPENAI_API_KEY"] = "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"  # 🔹 Replace with your key
+# OpenAI API Key - Get your key from https://platform.openai.com/api-keys
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY_HERE")  # 🔹 Replace with your key
 
 # Microsoft OAuth Configuration
 # Set these environment variables or replace with your values
@@ -62,12 +62,12 @@ to reach out to our support team, you can use the link: https://www.cloudfuze.co
 url = "https://www.cloudfuze.com/wp-json/wp/v2/posts?tags=412&per_page=100"
 
 # Pagination settings for blog post fetching
-BLOG_POSTS_PER_PAGE = 100  # Number of posts per page
+BLOG_POSTS_PER_PAGE = 200 # Number of posts per page
 BLOG_MAX_PAGES = 10        # Maximum number of pages to fetch (total: 1000 posts)
 
 # Langfuse configuration for observability (from .env file)
-LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
-LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY") 
-LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY", "pk-lf-dc7e676f-b620-4ddf-a78c-b4675f93a662")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY", "sk-lf-756c4b92-09cf-432d-9dd7-917ed409813c") 
+LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "http://localhost:3100")
 
 CHROMA_DB_PATH = "./data/chroma_db"

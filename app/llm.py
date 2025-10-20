@@ -51,7 +51,7 @@ def setup_qa_chain(retriever):
             # No predefined keywords, no hardcoded terms, no forced inclusions
             
             # Primary semantic search with the original query
-            relevant_docs = vectorstore.similarity_search(query, k=15)
+            relevant_docs = vectorstore.similarity_search(query, k=25)
             
             # Secondary semantic search with query rephrasing for better coverage
             # This helps catch semantically similar but differently worded content
@@ -70,7 +70,7 @@ def setup_qa_chain(retriever):
                 
                 # Search with each rephrased query
                 for rephrased_query in rephrased_queries[:2]:  # Limit to 2 rephrasings
-                    additional_docs = vectorstore.similarity_search(rephrased_query, k=8)
+                    additional_docs = vectorstore.similarity_search(rephrased_query, k=12)
                     relevant_docs.extend(additional_docs)
                     
             except Exception as e:
@@ -91,7 +91,7 @@ def setup_qa_chain(retriever):
             
             # Limit to reasonable number of documents for processing
             # Too many documents can overwhelm the LLM and reduce quality
-            final_docs = unique_docs[:20]
+            final_docs = unique_docs[:30]
             
             # Invoke the document chain with the semantically relevant documents
             result = self.document_chain.invoke({

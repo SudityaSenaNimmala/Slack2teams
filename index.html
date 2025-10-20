@@ -269,6 +269,8 @@
       color: black; 
       margin-right: auto; 
       text-align: left; 
+      position: relative;
+      padding-bottom: 35px; /* Extra space for feedback buttons */
     }
 
     /* Thinking animation */
@@ -380,38 +382,31 @@
       color: #004499;
     }
 
-    /* Copy button styles */
+    /* Copy button styles - ChatGPT style */
     .copy-button {
-      background: #f8f9fa;
-      border: 1px solid #dee2e6;
-      border-radius: 6px;
-      padding: 6px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 6px;
       cursor: pointer;
-      font-size: 12px;
-      color: #6c757d;
-      transition: all 0.2s ease;
-      display: flex;
+      font-size: 14px;
+      color: #6e6e80;
+      transition: all 0.15s ease;
+      display: inline-flex;
       align-items: center;
-      width: fit-content;
-      position: absolute;
-      top: 50%;
-      left: -80px;
-      transform: translateY(-50%);
-      z-index: 10;
+      justify-content: center;
+      width: 28px;
       height: 28px;
-      box-sizing: border-box;
     }
 
     .copy-button:hover {
-      background: #e9ecef;
-      color: #495057;
-      border-color: #adb5bd;
+      background: #f4f4f4;
+      color: #1a1a1a;
     }
 
     .copy-button.copied {
-      background: #d4edda;
-      color: #155724;
-      border-color: #c3e6cb;
+      background: #f4f4f4;
+      color: #10a37f;
     }
 
     .message.bot {
@@ -420,6 +415,54 @@
 
     .message.bot .message-content {
       margin-bottom: 0;
+    }
+
+    /* Feedback buttons - ChatGPT style */
+    .feedback-buttons {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+      align-items: center;
+    }
+
+    .feedback-btn {
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #6e6e80;
+      width: 28px;
+      height: 28px;
+    }
+
+    .feedback-btn:hover {
+      background: #f4f4f4;
+      color: #1a1a1a;
+    }
+
+    .feedback-btn.selected {
+      background: #f4f4f4;
+      color: #1a1a1a;
+    }
+
+    .feedback-btn.thumbs-up.selected {
+      color: #10a37f;
+    }
+
+    .feedback-btn.thumbs-down.selected {
+      color: #ef4444;
+    }
+
+    .feedback-text {
+      font-size: 11px;
+      color: #6c757d;
+      margin-left: 4px;
     }
 
     #input-container {
@@ -527,28 +570,38 @@
       div.className = "message " + sender;
       div.innerText = content;
       messagesDiv.appendChild(div);
+      console.log(`[UI] Added ${sender} message. Total messages now: ${messagesDiv.children.length}`);
       scrollToBottom();
       return div;
     }
 
-    function addMessageHTML(content, sender) {
+    function addMessageHTML(content, sender, traceId = null) {
       const div = document.createElement("div");
       div.className = "message " + sender;
       
       if (sender === "bot") {
-        // For bot messages, wrap content and add copy button positioned absolutely
+        // For bot messages, wrap content and add copy button + feedback buttons
         div.innerHTML = `
           <div class="message-content">${content}</div>
-          <button class="copy-button" onclick="copyMessage(this)" title="Copy message">
-            📋 Copy
-          </button>
+          <div class="feedback-buttons">
+            <button class="copy-button" onclick="copyMessage(this)" title="Copy message">📋</button>
+            <button class="feedback-btn thumbs-up" onclick="submitFeedback(this, 'thumbs_up')" title="Good response">👍</button>
+            <button class="feedback-btn thumbs-down" onclick="submitFeedback(this, 'thumbs_down')" title="Bad response">👎</button>
+            <span class="feedback-text"></span>
+          </div>
         `;
+        
+        // Store trace_id if provided
+        if (traceId) {
+          div.dataset.traceId = traceId;
+        }
       } else {
         // For user messages, keep as is
         div.innerHTML = content;
       }
       
       messagesDiv.appendChild(div);
+      console.log(`[UI] Added ${sender} message HTML. Total messages now: ${messagesDiv.children.length}`);
       scrollToBottom();
       return div;
     }
@@ -589,6 +642,55 @@
       });
     }
 
+    // Submit feedback functionality
+    async function submitFeedback(button, rating) {
+      try {
+        const messageDiv = button.closest('.message.bot');
+        const traceId = messageDiv.dataset.traceId;
+        
+        if (!traceId) {
+          console.error('No trace_id found for this message');
+          return;
+        }
+        
+        // Send feedback to backend
+        const response = await fetch("http://127.0.0.1:8002/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            trace_id: traceId,
+            rating: rating,
+            comment: ""
+          }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Feedback submitted:", data);
+          
+          // Update UI to show feedback was recorded
+          const feedbackButtons = messageDiv.querySelectorAll('.feedback-btn');
+          feedbackButtons.forEach(btn => btn.classList.remove('selected'));
+          button.classList.add('selected');
+          
+          // Show feedback text
+          const feedbackText = messageDiv.querySelector('.feedback-text');
+          feedbackText.textContent = rating === 'thumbs_up' ? 'Thanks for your feedback!' : 'Thanks! We\'ll improve.';
+          
+          // Clear feedback text after 3 seconds
+          setTimeout(() => {
+            feedbackText.textContent = '';
+          }, 3000);
+          
+        } else {
+          console.error("Failed to submit feedback");
+        }
+        
+      } catch (error) {
+        console.error("Error submitting feedback:", error);
+      }
+    }
+
     // Copy message functionality
     async function copyMessage(button) {
       try {
@@ -604,7 +706,7 @@
         
         // Show success feedback
         const originalText = button.innerHTML;
-        button.innerHTML = '✅ Copied!';
+        button.innerHTML = '✓';
         button.classList.add('copied');
         
         // Reset after 2 seconds
@@ -652,8 +754,9 @@
       `;
 
       try {
-        console.log("Sending question:", question);
-        console.log("User ID:", currentUser ? currentUser.id : "Not logged in");
+        console.log("[CHAT] Sending question:", question);
+        console.log("[CHAT] User ID:", currentUser ? currentUser.id : "Not logged in");
+        console.log("[CHAT] Current messages in UI:", messagesDiv.children.length);
         
         const requestBody = { question };
         
@@ -663,6 +766,8 @@
         } else {
           requestBody.session_id = sessionId;
         }
+        
+        console.log("[CHAT] Request body:", requestBody);
         
         // Use streaming endpoint for real-time responses
         const response = await fetch("http://127.0.0.1:8002/chat/stream", {
@@ -697,47 +802,55 @@
                 const data = JSON.parse(line.slice(6));
                 
                 if (data.type === 'thinking_complete') {
-                  // Clear thinking animation and prepare for streaming
-                  botDiv.innerHTML = `
-                    <div class="message-content"></div>
-                    <button class="copy-button" onclick="copyMessage(this)" title="Copy message">
-                      📋 Copy
-                    </button>
-                  `;
+                  // Clear thinking animation and prepare for streaming (NO BUTTONS YET)
+                  botDiv.innerHTML = `<div class="message-content"></div>`;
                   console.log("Thinking complete, starting streaming...");
                 } else if (data.type === 'token') {
-                  // Add token to response
-                  fullResponse += data.token;
+                  // Add token to response (STILL NO BUTTONS)
+                  const token = data.token;
+                  console.log("Token received:", token); // Debug log
+                  fullResponse += token;
                   // Render markdown and update only the message content
                   const contentDiv = botDiv.querySelector('.message-content');
                   if (contentDiv) {
                     contentDiv.innerHTML = renderMarkdown(fullResponse);
                   } else {
-                    // Fallback: update entire div if structure is different
-                    botDiv.innerHTML = `
-                      <div class="message-content">${renderMarkdown(fullResponse)}</div>
-                      <button class="copy-button" onclick="copyMessage(this)" title="Copy message" >
-                        📋 Copy
-                      </button>
-                    `;
+                    // Fallback: create content div only
+                    botDiv.innerHTML = `<div class="message-content">${renderMarkdown(fullResponse)}</div>`;
                   }
                   scrollToBottom();
                 } else if (data.type === 'done') {
-                  // Final response received
+                  // Final response received with trace_id
                   fullResponse = data.full_response || fullResponse;
-                  const contentDiv = botDiv.querySelector('.message-content');
-                  if (contentDiv) {
-                    contentDiv.innerHTML = renderMarkdown(fullResponse);
-                  } else {
-                    // Fallback: update entire div if structure is different
-                    botDiv.innerHTML = `
-                      <div class="message-content">${renderMarkdown(fullResponse)}</div>
-                      <button class="copy-button" onclick="copyMessage(this)" title="Copy message" >
-                        📋 Copy
-                      </button>
-                    `;
+                  const traceId = data.trace_id;
+                  
+                  console.log("Done received. Full response length:", fullResponse.length);
+                  console.log("Full response content:", fullResponse);
+                  
+                  // Check if response is empty
+                  if (!fullResponse || fullResponse.trim() === '') {
+                    console.error("⚠️ Empty response received!");
+                    fullResponse = "I apologize, but I wasn't able to generate a response. Please try again.";
                   }
-                  console.log("Streaming complete");
+                  
+                  // NOW ADD THE BUTTONS AFTER RESPONSE IS COMPLETE
+                  botDiv.innerHTML = `
+                    <div class="message-content">${renderMarkdown(fullResponse)}</div>
+                    <div class="feedback-buttons">
+                      <button class="copy-button" onclick="copyMessage(this)" title="Copy message">📋</button>
+                      <button class="feedback-btn thumbs-up" onclick="submitFeedback(this, 'thumbs_up')" title="Good response">👍</button>
+                      <button class="feedback-btn thumbs-down" onclick="submitFeedback(this, 'thumbs_down')" title="Bad response">👎</button>
+                      <span class="feedback-text"></span>
+                    </div>
+                  `;
+                  
+                  // Store trace_id on the bot message for feedback
+                  if (traceId) {
+                    botDiv.dataset.traceId = traceId;
+                  }
+                  
+                  console.log("[CHAT] Streaming complete, trace_id:", traceId);
+                  console.log("[CHAT] Total messages in UI now:", messagesDiv.children.length);
                   return;
                 } else if (data.type === 'error') {
                   throw new Error(data.error);
@@ -767,6 +880,7 @@
 
     // Add a function to start a new conversation (clear memory)
     async function startNewConversation() {
+      console.log('[NEW_CHAT] Starting new conversation - clearing messages');
       if (currentUser && currentUser.id) {
         // Clear user's chat history on server
         try {
@@ -782,6 +896,7 @@
       sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       localStorage.setItem('chatbot_session_id', sessionId);
       messagesDiv.innerHTML = '';
+      console.log('[NEW_CHAT] Messages cleared. Total messages now: 0');
     }
 
     // Variables for undo functionality
@@ -804,6 +919,7 @@
         };
         
         // Clear the messages display
+        console.log('[NEW_CHAT] Clearing messages for undo feature');
         messagesDiv.innerHTML = '';
         
         // Change button to undo mode
@@ -1118,12 +1234,24 @@
         if (isValid) {
           currentUser = user;
           updateUserInfo(user);
-          loadUserChatHistory(user.id);
-          hideLoadingIndicator();
+          // Always load history, even if it fails
+          loadUserChatHistory(user.id).catch(error => {
+            console.error('[ERROR] Failed to load history, but continuing:', error);
+          }).finally(() => {
+            hideLoadingIndicator();
+          });
         } else {
+          hideLoadingIndicator();
           localStorage.removeItem('user');
           window.location.href = "login.html";
         }
+      }).catch(error => {
+        console.error('[ERROR] Token verification failed:', error);
+        hideLoadingIndicator();
+        // Still try to use the app with cached user
+        currentUser = user;
+        updateUserInfo(user);
+        loadUserChatHistory(user.id).catch(err => console.error('[ERROR] History load failed:', err));
       });
     }
 
@@ -1177,31 +1305,51 @@
     // Load user's chat history
     async function loadUserChatHistory(userId) {
       try {
-        const response = await fetch(`http://127.0.0.1:8002/chat/history/${userId}`);
+        console.log('[HISTORY] Loading chat history for user:', userId);
+        const response = await fetch(`http://127.0.0.1:8002/chat/history/${userId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
         if (response.ok) {
           const data = await response.json();
           const history = data.history || [];
+          console.log('[HISTORY] Loaded', history.length, 'messages from server');
           
-          // Clear existing messages
-          messagesDiv.innerHTML = '';
-          
-          // Load chat history
-          for (const message of history) {
-            const sender = message.role === 'user' ? 'user' : 'bot';
-            if (sender === 'bot') {
-              // Render markdown for bot messages with copy button
-              addMessageHTML(renderMarkdown(message.content), sender);
-            } else {
-              // Keep plain text for user messages
-              addMessage(message.content, sender);
+          // Only clear if we have history to show
+          if (history.length > 0) {
+            // Clear existing messages
+            messagesDiv.innerHTML = '';
+            
+            // Load chat history
+            for (const message of history) {
+              const sender = message.role === 'user' ? 'user' : 'bot';
+              if (sender === 'bot') {
+                // Render markdown for bot messages with copy button and feedback buttons
+                // Note: Historical messages won't have trace_id, so feedback won't work for them
+                addMessageHTML(renderMarkdown(message.content), sender, null);
+              } else {
+                // Keep plain text for user messages
+                addMessage(message.content, sender);
+              }
             }
+            
+            console.log('[HISTORY] Displayed', history.length, 'messages in UI');
+            // Scroll to bottom
+            scrollToBottom();
+          } else {
+            console.log('[HISTORY] No history to load (empty chat)');
           }
-          
-          // Scroll to bottom
-          scrollToBottom();
+        } else {
+          console.error('[HISTORY] Failed to load, status:', response.status);
+          const errorText = await response.text();
+          console.error('[HISTORY] Error details:', errorText);
         }
       } catch (error) {
-        console.error('Failed to load chat history:', error);
+        console.error('[HISTORY] Failed to load chat history:', error);
+        console.error('[HISTORY] Error details:', error.message, error.stack);
         // Continue with empty chat if loading fails
       }
     }

@@ -69,17 +69,17 @@ def save_metadata(metadata):
 
 def should_rebuild_vectorstore():
     """Check if vectorstore needs to be rebuilt based on file changes."""
-    print("🔍 Checking if vectorstore rebuild is needed...")
+    print("[*] Checking if vectorstore rebuild is needed...")
     
     # If vectorstore doesn't exist, we need to rebuild
     if not os.path.exists(CHROMA_DB_PATH):
-        print("❌ Vectorstore not found - rebuild needed")
+        print("[!] Vectorstore not found - rebuild needed")
         return True
     
     # Load stored metadata
     stored_metadata = load_stored_metadata()
     if not stored_metadata:
-        print("❌ No stored metadata found - rebuild needed")
+        print("[!] No stored metadata found - rebuild needed")
         return True
     
     # Get current metadata
@@ -89,17 +89,17 @@ def should_rebuild_vectorstore():
     sources_to_check = ["pdfs", "excel", "docs", "url"]
     for source in sources_to_check:
         if stored_metadata.get(source) != current_metadata.get(source):
-            print(f"❌ {source} has changed - rebuild needed")
+            print(f"[!] {source} has changed - rebuild needed")
             print(f"   Stored: {stored_metadata.get(source)}")
             print(f"   Current: {current_metadata.get(source)}")
             return True
     
-    print("✅ No changes detected - using existing vectorstore")
+    print("[OK] No changes detected - using existing vectorstore")
     return False
 
 def load_existing_vectorstore():
     """Load existing vectorstore without rebuilding."""
-    print("📂 Loading existing vectorstore...")
+    print("[*] Loading existing vectorstore...")
     try:
         embeddings = OpenAIEmbeddings()
         vectorstore = Chroma(
@@ -109,10 +109,10 @@ def load_existing_vectorstore():
         
         # Test if vectorstore is working
         total_docs = vectorstore._collection.count()
-        print(f"✅ Loaded existing vectorstore with {total_docs} documents")
+        print(f"[OK] Loaded existing vectorstore with {total_docs} documents")
         return vectorstore
     except Exception as e:
-        print(f"❌ Failed to load existing vectorstore: {e}")
+        print(f"[!] Failed to load existing vectorstore: {e}")
         return None
 
 def rebuild_vectorstore_if_needed():
@@ -172,7 +172,7 @@ def rebuild_vectorstore_if_needed():
     # Save metadata after successful build
     current_metadata = get_current_metadata()
     save_metadata(current_metadata)
-    print("💾 Saved vectorstore metadata for future change detection")
+    print("[OK] Saved vectorstore metadata for future change detection")
     
     return vectorstore
 
@@ -230,21 +230,21 @@ def manage_vectorstore_backup_and_rebuild():
 def initialize_vectorstore():
     """Smart vectorstore initialization that only rebuilds when needed."""
     print("=" * 60)
-    print("🚀 INITIALIZING CF-CHATBOT KNOWLEDGE BASE")
+    print(">> INITIALIZING CF-CHATBOT KNOWLEDGE BASE")
     print("=" * 60)
     
     # Check if rebuild is needed
     if should_rebuild_vectorstore():
-        print("🔨 Rebuilding vectorstore...")
+        print("[*] Rebuilding vectorstore...")
         vectorstore = rebuild_vectorstore_if_needed()
     else:
         # Try to load existing vectorstore
         vectorstore = load_existing_vectorstore()
         if vectorstore is None:
-            print("⚠️  Failed to load existing vectorstore, rebuilding...")
+            print("[!] Failed to load existing vectorstore, rebuilding...")
             vectorstore = rebuild_vectorstore_if_needed()
     
-    print("✅ Vectorstore initialization complete!")
+    print("[OK] Vectorstore initialization complete!")
     print("=" * 60)
     return vectorstore
 
@@ -253,5 +253,7 @@ vectorstore = initialize_vectorstore()
 
 retriever = vectorstore.as_retriever(
     search_type="similarity",
-    search_kwargs={"k": 15}  # Optimized for semantic search
+    search_kwargs={
+        "k": 25  # Fetch more documents for better coverage
+    }
 )

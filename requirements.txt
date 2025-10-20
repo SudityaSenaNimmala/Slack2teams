@@ -13,6 +13,7 @@ pydantic==2.5.0
 PyPDF2==3.0.1
 python-multipart==0.0.6
 python-dotenv==1.0.0
+langfuse==2.51.2
 # PDF processing alternatives (install one of these)
 # Option 1: Pre-compiled PyMuPDF (recommended for Windows)
 # pymupdf==1.23.8

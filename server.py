@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.endpoints import router as chat_router
