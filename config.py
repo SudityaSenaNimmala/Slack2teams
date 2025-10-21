@@ -5,13 +5,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # OpenAI API Key - Get your key from https://platform.openai.com/api-keys
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY_HERE")  # 🔹 Replace with your key
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY environment variable is required")
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 # Microsoft OAuth Configuration
-# Set these environment variables or replace with your values
-MICROSOFT_CLIENT_ID = os.getenv("MICROSOFT_CLIENT_ID", "63bd4522-368b-4bd7-a84d-9c7f205cd2a6")
-MICROSOFT_CLIENT_SECRET = os.getenv("MICROSOFT_CLIENT_SECRET", "g-C8Q~ZCcJmuHOt~wEJinGVfiZGYd9gzEy6Wfb5Y")
+MICROSOFT_CLIENT_ID = os.getenv("MICROSOFT_CLIENT_ID")
+MICROSOFT_CLIENT_SECRET = os.getenv("MICROSOFT_CLIENT_SECRET")
 MICROSOFT_TENANT = os.getenv("MICROSOFT_TENANT", "common")
+
+if not MICROSOFT_CLIENT_ID or not MICROSOFT_CLIENT_SECRET:
+    raise ValueError("MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET environment variables are required")
 
 
 SYSTEM_PROMPT = """You are a specialized AI assistant focused EXCLUSIVELY on Slack to Microsoft Teams migration. You have access to CloudFuze's knowledge base containing information specifically about Slack to Teams migration services.
@@ -65,9 +70,20 @@ url = "https://www.cloudfuze.com/wp-json/wp/v2/posts?tags=412&per_page=100"
 BLOG_POSTS_PER_PAGE = 200 # Number of posts per page
 BLOG_MAX_PAGES = 10        # Maximum number of pages to fetch (total: 1000 posts)
 
-# Langfuse configuration for observability (from .env file)
-LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY", "pk-lf-dc7e676f-b620-4ddf-a78c-b4675f93a662")
-LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY", "sk-lf-756c4b92-09cf-432d-9dd7-917ed409813c") 
+# Langfuse configuration for observability
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
 LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "http://localhost:3100")
 
+if not LANGFUSE_PUBLIC_KEY or not LANGFUSE_SECRET_KEY:
+    raise ValueError("LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY environment variables are required")
+
 CHROMA_DB_PATH = "./data/chroma_db"
+
+# MongoDB Configuration
+MONGODB_URL = os.getenv("MONGODB_URL")
+MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "slack2teams")
+MONGODB_CHAT_COLLECTION = os.getenv("MONGODB_CHAT_COLLECTION", "chat_histories")
+
+if not MONGODB_URL:
+    raise ValueError("MONGODB_URL environment variable is required")

@@ -12,7 +12,7 @@ from datetime import datetime
 
 from app.llm import setup_qa_chain
 from app.vectorstore import retriever, vectorstore
-from app.memory import add_to_conversation, get_conversation_context, get_user_chat_history, clear_user_chat_history
+from app.mongodb_memory import add_to_conversation, get_conversation_context, get_user_chat_history, clear_user_chat_history
 from app.helpers import strip_markdown, preserve_markdown
 from app.langfuse_integration import langfuse_tracker
 from config import SYSTEM_PROMPT, MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_TENANT
@@ -166,7 +166,7 @@ async def chat(request: Request):
         ])
         
         # Get conversation context for continuity
-        conversation_context = get_conversation_context(conversation_id)
+        conversation_context = await get_conversation_context(conversation_id)
         enhanced_query = f"{conversation_context}\n\nUser: {question}" if conversation_context else question
         
         chain = conversational_prompt | llm
@@ -174,14 +174,14 @@ async def chat(request: Request):
         answer = result.content
     else:
         # Handle informational queries with document retrieval
-        conversation_context = get_conversation_context(conversation_id)
+        conversation_context = await get_conversation_context(conversation_id)
         enhanced_query = f"{conversation_context}\n\nUser: {question}" if conversation_context else question
         result = qa_chain.invoke({"query": enhanced_query})
         answer = result["result"]
 
     # Add both user question and bot response to conversation AFTER processing
-    add_to_conversation(conversation_id, "user", question)
-    add_to_conversation(conversation_id, "assistant", answer)
+    await add_to_conversation(conversation_id, "user", question)
+    await add_to_conversation(conversation_id, "assistant", answer)
 
     # Log to Langfuse for observability
     trace_id = langfuse_tracker.create_trace(
@@ -227,8 +227,8 @@ async def chat_stream(request: Request):
                         await asyncio.sleep(0.01)
                 
                 # Add to conversation
-                add_to_conversation(conversation_id, "user", question)
-                add_to_conversation(conversation_id, "assistant", full_response)
+                await add_to_conversation(conversation_id, "user", question)
+                await add_to_conversation(conversation_id, "assistant", full_response)
                 
                 # Log to Langfuse
                 trace_id = None
@@ -250,7 +250,7 @@ async def chat_stream(request: Request):
                 return
             
             # Get conversation context BEFORE adding current question
-            conversation_context = get_conversation_context(conversation_id)
+            conversation_context = await get_conversation_context(conversation_id)
 
             # Combine question with conversation context for better continuity
             enhanced_query = f"{conversation_context}\n\nUser: {question}" if conversation_context else question
@@ -289,8 +289,8 @@ async def chat_stream(request: Request):
                         await asyncio.sleep(0.01)
                 
                 # Add to conversation
-                add_to_conversation(conversation_id, "user", question)
-                add_to_conversation(conversation_id, "assistant", full_response)
+                await add_to_conversation(conversation_id, "user", question)
+                await add_to_conversation(conversation_id, "assistant", full_response)
                 
                 # Log to Langfuse (don't block response if this fails)
                 trace_id = None
@@ -364,8 +364,8 @@ async def chat_stream(request: Request):
             
             
             # Add both user question and bot response to conversation AFTER processing
-            add_to_conversation(conversation_id, "user", question)
-            add_to_conversation(conversation_id, "assistant", full_response)
+            await add_to_conversation(conversation_id, "user", question)
+            await add_to_conversation(conversation_id, "assistant", full_response)
             
             # Log to Langfuse (don't block response if this fails)
             trace_id = None
@@ -409,7 +409,7 @@ async def chat_stream(request: Request):
 async def get_chat_history(user_id: str):
     """Get chat history for a specific user."""
     try:
-        history = get_user_chat_history(user_id)
+        history = await get_user_chat_history(user_id)
         return {"user_id": user_id, "history": history}
     except Exception as e:
         return {"error": str(e)}
@@ -418,7 +418,7 @@ async def get_chat_history(user_id: str):
 async def clear_chat_history(user_id: str):
     """Clear chat history for a specific user."""
     try:
-        clear_user_chat_history(user_id)
+        await clear_user_chat_history(user_id)
         return {"message": f"Chat history cleared for user {user_id}"}
     except Exception as e:
         return {"error": str(e)}

@@ -2,9 +2,32 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.endpoints import router as chat_router
+from app.mongodb_memory import close_mongodb_connection
 import uvicorn
+import asyncio
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan events."""
+    # Startup
+    from app.mongodb_memory import mongodb_memory
+    try:
+        await mongodb_memory.connect()
+        print("✅ MongoDB connected successfully")
+    except Exception as e:
+        print(f"❌ Failed to connect to MongoDB: {e}")
+    
+    yield
+    
+    # Shutdown
+    try:
+        await close_mongodb_connection()
+        print("✅ MongoDB connection closed")
+    except Exception as e:
+        print(f"⚠️ Error closing MongoDB connection: {e}")
+
+app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
